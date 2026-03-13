@@ -105,26 +105,32 @@
   <script>
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2YjVjM2Y1Ni1jMGI4LTQ3MjktYWY4My1iMTI3ZDQ2ZDIzN2YiLCJpZCI6NDAzMTA5LCJpYXQiOjE3NzM0MTAzNTd9.VidG6jNAvEQCUxzW6iPCk8Awlv8-Zwx-0c1XcYBBa-o';
 
-    const viewer = new Cesium.Viewer('cesiumContainer', {
-      terrainProvider: Cesium.createWorldTerrain({ requestVertexNormals: true }),
+    // Use new Terrain API (1.111+) with fallback
+    const terrainOpts = { requestVertexNormals: true };
+    const worldTerrain = Cesium.Terrain
+      ? Cesium.Terrain.fromWorldTerrain(terrainOpts)
+      : Cesium.createWorldTerrain(terrainOpts);
+
+    const viewerOpts = {
       baseLayerPicker: false, navigationHelpButton: false,
       homeButton: false, sceneModePicker: false, geocoder: false,
       animation: false, timeline: false, fullscreenButton: false,
       infoBox: false, selectionIndicator: false,
-    });
+    };
+    if (Cesium.Terrain) {
+      viewerOpts.terrain = worldTerrain;
+    } else {
+      viewerOpts.terrainProvider = worldTerrain;
+    }
+
+    const viewer = new Cesium.Viewer('cesiumContainer', viewerOpts);
 
     viewer.scene.globe.depthTestAgainstTerrain = true;
     viewer.scene.globe.enableLighting = false;
 
-    // Base imagery
-    viewer.imageryLayers.removeAll();
-    viewer.imageryLayers.addImageryProvider(
-      new Cesium.UrlTemplateImageryProvider({
-        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        credit: '© OpenStreetMap contributors',
-        maximumLevel: 19,
-      })
-    );
+    // Keep Ion default imagery (Bing Maps — reliable, no CORS)
+    // Add OSM on top only if Ion imagery fails
+    const baseLayer = viewer.imageryLayers.get(0);
 
     const tileBounds = Cesium.Rectangle.fromDegrees(-83.0663, 34.6723, -82.8953, 34.8135);
 
@@ -212,9 +218,15 @@
       hillshadeLayer.show = e.target.checked;
     });
     document.getElementById('terrain-toggle').addEventListener('change', e => {
-      viewer.terrainProvider = e.target.checked
-        ? Cesium.createWorldTerrain({ requestVertexNormals: true })
-        : new Cesium.EllipsoidTerrainProvider();
+      if (e.target.checked) {
+        if (Cesium.Terrain) {
+          viewer.scene.setTerrain(Cesium.Terrain.fromWorldTerrain({ requestVertexNormals: true }));
+        } else {
+          viewer.terrainProvider = Cesium.createWorldTerrain({ requestVertexNormals: true });
+        }
+      } else {
+        viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+      }
     });
     document.getElementById('view-toggle').addEventListener('change', e => {
       viewer.scene.mode = e.target.checked
