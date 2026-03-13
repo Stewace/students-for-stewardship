@@ -38,6 +38,8 @@ from rosgen.python.stream_delineation import run_delineation
 from rosgen.python.valley_analysis import run_valley_analysis
 from rosgen.python.rosgen_parameters import assemble_rosgen_parameters
 from rosgen.python.rosgen_classify import classify_all_reaches
+from models.lda_model import build_literature_model, build_from_training
+from models.ecoregion_classifier import run_classification_pipeline
 
 
 # ---------------------------------------------------------------------------
@@ -190,8 +192,24 @@ def main():
         help="Skip terrain analysis if rasters already exist"
     )
     parser.add_argument(
-        "--start-from", type=int, default=1, choices=[1, 2, 3, 4, 5],
-        help="Start from a specific stage (1=terrain, 2=streams, 3=xs, 4=params, 5=classify)"
+        "--lec-classify", action="store_true",
+        help="Run LEC landscape classification after terrain analysis"
+    )
+    parser.add_argument(
+        "--lec-model", default=None,
+        help="Path to saved LDA model JSON (auto-built from literature if absent)"
+    )
+    parser.add_argument(
+        "--lec-training-csv", default=None,
+        help="CSV of field training data to fit/update the LDA model"
+    )
+    parser.add_argument(
+        "--write-proba", action="store_true",
+        help="Write per-class posterior probability rasters"
+    )
+    parser.add_argument(
+        "--start-from", type=int, default=1, choices=[1, 2, 3, 4, 5, 6],
+        help="Start from a specific stage (1=terrain, 2=streams, 3=xs, 4=params, 5=classify, 6=lec)"
     )
 
     args = parser.parse_args()
@@ -239,7 +257,56 @@ def main():
     # Stage 5: Classify
     classified_geojson = stage_rosgen_classify(params_geojson, out)
 
-    # Stage 6: Publish
+    # Stage 6: LEC landscape classification (optional)
+    if args.lec_classify or args.start_from >= 6:
+        print("\n" + "="*60)
+        print("[Stage 6] LEC Landscape Classification (Piedmont)")
+        print("="*60)
+        terrain_dir = out / "terrain"
+        soil_dir    = out / "soil"
+
+        # Build or load model
+        if args.lec_training_csv:
+            print(f"Fitting LDA from field training data: {args.lec_training_csv}")
+            model_save = str(out / "models" / "piedmont_lda.json")
+            build_from_training(args.lec_training_csv, save_path=model_save)
+            args.lec_model = model_save
+        elif not args.lec_model:
+            print("No training CSV or saved model — using literature-seeded model.")
+            model_save = str(out / "models" / "piedmont_lda.json")
+            build_literature_model(save_path=model_save)
+            args.lec_model = model_save
+
+        # Required raster paths
+        tsi_path = terrain_dir / "terrain_shape_index.tif"
+        twi_path = terrain_dir / "twi.tif"
+        slope_path = terrain_dir / "slope.tif"
+        aspect_path = terrain_dir / "aspect.tif"
+        clay_d_path = soil_dir / "clay_depth.tif"
+        clay_p_path = soil_dir / "clay_pct_b.tif"
+        drain_path  = soil_dir / "drainage_class.tif"
+
+        missing = [p for p in [tsi_path, twi_path, slope_path, aspect_path]
+                   if not p.exists()]
+        if missing:
+            print(f"WARNING: Missing terrain rasters: {missing}")
+            print("Run Stage 1 first (or use --simulate flag for testing).")
+        else:
+            run_classification_pipeline(
+                dem_path=dem_terrain,
+                slope_path=str(slope_path),
+                aspect_path=str(aspect_path),
+                tsi_path=str(tsi_path),
+                twi_path=str(twi_path),
+                clay_depth_path=str(clay_d_path) if clay_d_path.exists() else str(slope_path),
+                clay_pct_path=str(clay_p_path) if clay_p_path.exists() else str(slope_path),
+                drainage_path=str(drain_path) if drain_path.exists() else str(slope_path),
+                output_dir=str(out / "lec_classification"),
+                model_path=args.lec_model,
+                write_proba=args.write_proba,
+            )
+
+    # Stage 7: Publish
     hillshade = str(out / "terrain" / "hillshade.tif") if args.start_from <= 1 else None
     stage_publish(classified_geojson, hillshade)
 
@@ -248,12 +315,13 @@ def main():
     print("="*60)
     print("""
 Next steps:
-  1. Load outputs in QGIS for visual QA
-  2. Review rosgen_classified_summary.csv — check low-confidence reaches
-  3. Field-verify F and G type reaches (incised/degraded)
-  4. Update data/field/plots/field_measurements.csv with field data
-  5. Re-run from Stage 4 with --start-from 4 --field-data ... to update classification
-  6. Run LEC discriminant analysis: see map-system/workflows/lec-classification.md
+  1. Load data/processed/lec_classification/lec_class.tif in QGIS
+  2. Use data/processed/lec_classification/lec_legend.csv for symbology
+  3. Review rosgen_classified_summary.csv — check low-confidence reaches
+  4. Field-verify reaches and collect LEC training plots
+  5. Re-run with --lec-training-csv data/field/training/field_data.csv
+     to update the LDA model from field observations
+  6. Use --write-proba to see per-class confidence maps
 """)
 
 
