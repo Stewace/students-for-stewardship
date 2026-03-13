@@ -3,59 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>LEC Classification — Piedmont SC</title>
+  <title>LEC Classification — Piedmont</title>
   <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
   <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #cesiumContainer { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    html, body, #cesiumContainer { width: 100%; height: 100%; overflow: hidden; background: #111; }
 
     #header {
       position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      background: rgba(20, 35, 20, 0.88); color: #fff;
-      padding: 7px 16px; border-radius: 8px;
-      font-family: sans-serif; font-size: 13px; text-align: center;
-      z-index: 100; pointer-events: none; white-space: nowrap;
+      background: rgba(15, 28, 15, 0.90); color: #fff;
+      padding: 8px 18px; border-radius: 8px; white-space: nowrap;
+      font-family: sans-serif; font-size: 13px; text-align: center; z-index: 100;
+      pointer-events: none;
     }
-    #header strong { color: #8bc34a; }
-    #header small { display: block; color: #aaa; font-size: 11px; margin-top: 2px; }
+    #header strong { color: #8bc34a; font-size: 14px; }
+    #header small { display: block; color: #999; font-size: 11px; margin-top: 2px; }
 
-    #layer-controls {
+    #controls {
       position: absolute; top: 10px; right: 10px;
-      background: rgba(20, 35, 20, 0.88); color: #fff;
-      padding: 10px 14px; border-radius: 8px;
-      font-family: sans-serif; font-size: 13px; z-index: 100;
-      min-width: 160px;
+      background: rgba(15, 28, 15, 0.90); color: #fff;
+      padding: 11px 15px; border-radius: 8px;
+      font-family: sans-serif; font-size: 13px; z-index: 100; min-width: 168px;
     }
-    #layer-controls strong { color: #8bc34a; display: block; margin-bottom: 6px; }
-    #layer-controls label { display: flex; align-items: center; gap: 7px; margin: 5px 0; cursor: pointer; }
-    #layer-controls input[type=range] { width: 80px; accent-color: #8bc34a; }
+    #controls strong { color: #8bc34a; display: block; margin-bottom: 8px; font-size: 13px; }
+    #controls label { display: flex; align-items: center; gap: 8px; margin: 6px 0; cursor: pointer; }
+    #controls input[type=range] { width: 78px; accent-color: #8bc34a; }
+    #controls hr { border: none; border-top: 1px solid #2a3a2a; margin: 8px 0; }
+
+    .fly-btn {
+      display: block; width: 100%; margin-top: 4px; padding: 6px 0;
+      background: #2e5c1e; color: #fff; border: none; border-radius: 5px;
+      font-size: 12px; cursor: pointer; text-align: center;
+    }
+    .fly-btn:active { background: #3d7a28; }
 
     #legend {
-      position: absolute; bottom: 20px; right: 10px;
-      background: rgba(20, 35, 20, 0.88); color: #fff;
+      position: absolute; bottom: 18px; right: 10px;
+      background: rgba(15, 28, 15, 0.90); color: #fff;
       padding: 10px 14px; border-radius: 8px;
       font-family: sans-serif; font-size: 12px; z-index: 100;
     }
-    #legend h4 { color: #8bc34a; margin-bottom: 6px; font-size: 13px; }
-    .legend-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
-    .legend-swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+    #legend h4 { color: #8bc34a; margin-bottom: 7px; font-size: 13px; }
+    .lr { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+    .ls { width: 13px; height: 13px; border-radius: 2px; flex-shrink: 0; }
 
-    #info-panel {
-      position: absolute; bottom: 20px; left: 10px;
-      background: rgba(20, 35, 20, 0.92); color: #fff;
-      padding: 12px 16px; border-radius: 10px;
-      font-family: monospace; font-size: 13px;
-      min-width: 220px; display: none; z-index: 100;
+    #info {
+      position: absolute; bottom: 18px; left: 10px;
+      background: rgba(15, 28, 15, 0.92); color: #fff;
+      padding: 12px 16px 12px 14px; border-radius: 9px;
+      font-family: monospace; font-size: 13px; min-width: 210px;
+      display: none; z-index: 100;
     }
-    #info-panel h4 { color: #8bc34a; margin-bottom: 8px; font-size: 13px; letter-spacing: 1px; }
-    #info-panel table { width: 100%; border-collapse: collapse; }
-    #info-panel td { padding: 3px 4px; }
-    #info-panel td:first-child { color: #aaa; padding-right: 10px; }
-    #info-panel td:last-child { color: #fff; font-weight: bold; }
-    #close-info {
-      position: absolute; top: 8px; right: 10px;
-      cursor: pointer; color: #aaa; font-size: 16px; font-family: sans-serif;
+    #info h4 { color: #8bc34a; margin-bottom: 8px; font-size: 12px; letter-spacing: 1px; }
+    #info table { width: 100%; }
+    #info td { padding: 2px 4px; }
+    #info td:first-child { color: #999; padding-right: 8px; }
+    #info td:last-child { font-weight: bold; }
+    #info-close {
+      position: absolute; top: 7px; right: 10px;
+      color: #777; cursor: pointer; font-size: 15px; font-family: sans-serif;
     }
 
     .cesium-widget-credits { display: none !important; }
@@ -65,52 +72,46 @@
   <div id="cesiumContainer"></div>
 
   <div id="header">
-    <strong>LEC + Terrain — Hunnicutt Creek Watershed, Piedmont SC</strong>
-    <small>Tap to identify · Pinch to tilt · Two fingers to rotate</small>
+    <strong>LEC Classification — Piedmont Ecoregion (EPA III-45)</strong>
+    <small>Tap terrain to identify &nbsp;·&nbsp; Pinch to tilt &nbsp;·&nbsp; Drag to rotate</small>
   </div>
 
-  <div id="layer-controls">
+  <div id="controls">
     <strong>Layers</strong>
-    <label><input type="checkbox" id="lec-toggle" checked> LEC Classification</label>
-    <label>
-      Opacity
-      <input type="range" id="lec-opacity" min="0" max="100" value="75">
-    </label>
-    <label><input type="checkbox" id="hillshade-toggle" checked> Hillshade</label>
-    <label><input type="checkbox" id="terrain-toggle" checked> 3D Terrain</label>
-    <label><input type="checkbox" id="view-toggle"> 2D Mode</label>
+    <label><input type="checkbox" id="lec-on" checked> LEC Classification</label>
+    <label>Opacity <input type="range" id="lec-alpha" min="0" max="100" value="75"></label>
+    <label><input type="checkbox" id="boundary-on" checked> Piedmont Boundary</label>
+    <label><input type="checkbox" id="terrain-on" checked> 3D Terrain</label>
+    <hr>
+    <button class="fly-btn" id="fly-piedmont">&#9654; Piedmont Overview</button>
+    <button class="fly-btn" id="fly-study">&#9654; Study Area (Pickens Co.)</button>
   </div>
 
   <div id="legend">
     <h4>LEC Classes</h4>
-    <div class="legend-row"><div class="legend-swatch" style="background:#c62828"></div>Xeric Ridge</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#f57f17"></div>Dry-Mesic Slope</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#558b2f"></div>Mesic Slope</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#1565c0"></div>Cove / Hollow</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#00695c"></div>Bottomland</div>
-    <div class="legend-row"><div class="legend-swatch" style="background:#9e9e9e"></div>Upland Flat</div>
+    <div class="lr"><div class="ls" style="background:#c62828"></div>Xeric Ridge</div>
+    <div class="lr"><div class="ls" style="background:#f57f17"></div>Dry-Mesic Slope</div>
+    <div class="lr"><div class="ls" style="background:#558b2f"></div>Mesic Slope</div>
+    <div class="lr"><div class="ls" style="background:#1565c0"></div>Cove / Hollow</div>
+    <div class="lr"><div class="ls" style="background:#00695c"></div>Bottomland</div>
+    <div class="lr"><div class="ls" style="background:#9e9e9e"></div>Upland Flat</div>
   </div>
 
-  <div id="info-panel">
-    <span id="close-info" onclick="document.getElementById('info-panel').style.display='none'">&#x2715;</span>
+  <div id="info">
+    <span id="info-close" onclick="document.getElementById('info').style.display='none'">&#x2715;</span>
     <h4>POINT INFO</h4>
     <table>
-      <tr><td>Latitude</td><td id="pt-lat">—</td></tr>
-      <tr><td>Longitude</td><td id="pt-lon">—</td></tr>
-      <tr><td>Elevation</td><td id="pt-elev">—</td></tr>
-      <tr><td>LEC Class</td><td id="pt-lec">—</td></tr>
+      <tr><td>Latitude</td><td id="p-lat">—</td></tr>
+      <tr><td>Longitude</td><td id="p-lon">—</td></tr>
+      <tr><td>Elevation</td><td id="p-elev">—</td></tr>
+      <tr><td>LEC Class</td><td id="p-lec">—</td></tr>
     </table>
   </div>
 
   <script>
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2YjVjM2Y1Ni1jMGI4LTQ3MjktYWY4My1iMTI3ZDQ2ZDIzN2YiLCJpZCI6NDAzMTA5LCJpYXQiOjE3NzM0MTAzNTd9.VidG6jNAvEQCUxzW6iPCk8Awlv8-Zwx-0c1XcYBBa-o';
 
-    // Use new Terrain API (1.111+) with fallback
-    const terrainOpts = { requestVertexNormals: true };
-    const worldTerrain = Cesium.Terrain
-      ? Cesium.Terrain.fromWorldTerrain(terrainOpts)
-      : Cesium.createWorldTerrain(terrainOpts);
-
+    // ── Viewer with Cesium World Terrain ─────────────────────────────────────
     const viewerOpts = {
       baseLayerPicker: false, navigationHelpButton: false,
       homeButton: false, sceneModePicker: false, geocoder: false,
@@ -118,106 +119,163 @@
       infoBox: false, selectionIndicator: false,
     };
     if (Cesium.Terrain) {
-      viewerOpts.terrain = worldTerrain;
+      viewerOpts.terrain = Cesium.Terrain.fromWorldTerrain({ requestVertexNormals: true });
     } else {
-      viewerOpts.terrainProvider = worldTerrain;
+      viewerOpts.terrainProvider = Cesium.createWorldTerrain({ requestVertexNormals: true });
     }
-
     const viewer = new Cesium.Viewer('cesiumContainer', viewerOpts);
-
     viewer.scene.globe.depthTestAgainstTerrain = true;
-    viewer.scene.globe.enableLighting = false;
+    viewer.scene.globe.enableLighting = true;   // real sun shading on terrain
+    viewer.scene.globe.atmosphereLightIntensity = 10.0;
 
-    // Keep Ion default imagery (Bing Maps — reliable, no CORS)
-    // Add OSM on top only if Ion imagery fails
-    const baseLayer = viewer.imageryLayers.get(0);
-
-    const tileBounds = Cesium.Rectangle.fromDegrees(-83.0663, 34.6723, -82.8953, 34.8135);
-
-    const hillshadeLayer = viewer.imageryLayers.addImageryProvider(
-      new Cesium.UrlTemplateImageryProvider({
-        url: 'tiles/hillshade/{z}/{x}/{y}.png',
-        minimumLevel: 12, maximumLevel: 15,
-        rectangle: tileBounds,
-      })
-    );
-    hillshadeLayer.alpha = 0.5;
-
+    // ── LEC classification tiles (drape over real terrain) ───────────────────
+    const lecBounds = Cesium.Rectangle.fromDegrees(-83.0663, 34.6723, -82.8953, 34.8135);
     const lecLayer = viewer.imageryLayers.addImageryProvider(
       new Cesium.UrlTemplateImageryProvider({
         url: 'tiles/lec_classified/{z}/{x}/{y}.png',
         minimumLevel: 12, maximumLevel: 15,
-        rectangle: tileBounds,
+        rectangle: lecBounds,
       })
     );
     lecLayer.alpha = 0.75;
 
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(-82.981, 34.69, 12000),
-      orientation: {
-        heading: Cesium.Math.toRadians(340),
-        pitch: Cesium.Math.toRadians(-38),
-        roll: 0,
+    // ── Piedmont ecoregion boundary (EPA Level III Region 45) ────────────────
+    // Simplified polygon — Blue Ridge to the west, Fall Line to the east
+    const piedmontCoords = [
+      // Starting NE Virginia, going clockwise around the Piedmont
+      -77.2, 38.9,   // N Virginia (near DC)
+      -76.8, 38.2,   // E Virginia
+      -77.0, 37.0,   // SE Virginia
+      -77.5, 36.5,   // NC border Virginia
+      -78.0, 36.0,   // NC Piedmont east edge
+      -79.0, 35.2,
+      -80.0, 34.7,   // NC/SC Piedmont east
+      -80.6, 33.8,   // SC upper Piedmont
+      -81.5, 33.2,   // SC lower Piedmont / fall line
+      -82.3, 33.0,   // GA/SC
+      -83.5, 32.8,   // NE Georgia fall line
+      -84.5, 33.0,
+      -85.5, 33.5,   // Alabama/Georgia
+      -86.1, 33.8,
+      -86.2, 34.5,   // N Alabama
+      -85.5, 35.0,   // NW corner near TN
+      -84.8, 35.5,
+      -84.0, 35.8,   // TN/NC Blue Ridge foothills
+      -83.0, 36.2,
+      -81.8, 36.8,
+      -80.8, 37.2,   // SW Virginia Blue Ridge
+      -79.8, 37.8,
+      -78.8, 38.4,   // Central Virginia Blue Ridge
+      -78.0, 38.8,
+      -77.2, 38.9,   // back to start
+    ];
+
+    const piedmontPositions = [];
+    for (let i = 0; i < piedmontCoords.length; i += 2) {
+      piedmontPositions.push(Cesium.Cartesian3.fromDegrees(piedmontCoords[i], piedmontCoords[i + 1]));
+    }
+
+    const boundaryEntity = viewer.entities.add({
+      polyline: {
+        positions: piedmontPositions,
+        width: 2.5,
+        material: new Cesium.PolylineDashMaterialProperty({
+          color: Cesium.Color.fromCssColorString('#8bc34a').withAlpha(0.9),
+          dashLength: 18,
+        }),
+        clampToGround: true,
       },
-      duration: 2,
     });
 
+    // ── Study area marker ────────────────────────────────────────────────────
+    viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(-82.981, 34.743, 0),
+      point: { pixelSize: 10, color: Cesium.Color.YELLOW, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND },
+      label: {
+        text: 'Hunnicutt Creek\nStudy Area',
+        font: '12px sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new Cesium.Cartesian2(0, -22),
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      },
+    });
+
+    // ── Camera positions ─────────────────────────────────────────────────────
+    const VIEW_PIEDMONT = {
+      destination: Cesium.Cartesian3.fromDegrees(-81.5, 35.5, 500000),
+      orientation: { heading: 0, pitch: Cesium.Math.toRadians(-55), roll: 0 },
+    };
+    const VIEW_STUDY = {
+      destination: Cesium.Cartesian3.fromDegrees(-82.981, 34.72, 14000),
+      orientation: {
+        heading: Cesium.Math.toRadians(335),
+        pitch: Cesium.Math.toRadians(-35),
+        roll: 0,
+      },
+    };
+
+    // Start at Piedmont overview
+    viewer.camera.flyTo({ ...VIEW_PIEDMONT, duration: 0 });
+
+    document.getElementById('fly-piedmont').addEventListener('click', () => {
+      viewer.camera.flyTo({ ...VIEW_PIEDMONT, duration: 2 });
+    });
+    document.getElementById('fly-study').addEventListener('click', () => {
+      viewer.camera.flyTo({ ...VIEW_STUDY, duration: 2.5 });
+    });
+
+    // ── LEC lookup ───────────────────────────────────────────────────────────
     const LEC_NAMES = {
       1: 'Xeric Ridge', 2: 'Dry-Mesic Slope', 3: 'Mesic Slope',
       4: 'Cove / Hollow', 5: 'Bottomland', 6: 'Upland Flat',
     };
-
     let lecGrid = null;
-    fetch('lec_data.json')
-      .then(r => r.json())
-      .then(d => { lecGrid = d.points; })
-      .catch(() => {});
+    fetch('lec_data.json').then(r => r.json()).then(d => { lecGrid = d.points; }).catch(() => {});
 
     function nearestLEC(lon, lat) {
       if (!lecGrid) return null;
       let best = null, bestDist = Infinity;
       for (const p of lecGrid) {
         const dx = p[0] - lon, dy = p[1] - lat;
-        const d = dx * dx + dy * dy;
-        if (d < bestDist) { bestDist = d; best = p; }
+        const d2 = dx * dx + dy * dy;
+        if (d2 < bestDist) { bestDist = d2; best = p; }
       }
       return bestDist < 0.003 * 0.003 ? best : null;
     }
 
-    function handlePick(position) {
-      let cartesian = viewer.scene.pickPosition(position);
-      if (!Cesium.defined(cartesian)) {
-        cartesian = viewer.camera.pickEllipsoid(position, viewer.scene.globe.ellipsoid);
+    // ── Tap/click to identify ────────────────────────────────────────────────
+    function handlePick(pos) {
+      let cart = viewer.scene.pickPosition(pos);
+      if (!Cesium.defined(cart)) {
+        cart = viewer.camera.pickEllipsoid(pos, viewer.scene.globe.ellipsoid);
       }
-      if (!Cesium.defined(cartesian)) return;
+      if (!Cesium.defined(cart)) return;
 
-      const carto = Cesium.Cartographic.fromCartesian(cartesian);
+      const carto = Cesium.Cartographic.fromCartesian(cart);
       const lat = Cesium.Math.toDegrees(carto.latitude);
       const lon = Cesium.Math.toDegrees(carto.longitude);
       const elev = carto.height;
 
-      document.getElementById('pt-lat').textContent = lat.toFixed(5) + '\u00b0';
-      document.getElementById('pt-lon').textContent = lon.toFixed(5) + '\u00b0';
-      document.getElementById('pt-elev').textContent = isFinite(elev) ? elev.toFixed(0) + ' m' : '\u2014';
-
+      document.getElementById('p-lat').textContent  = lat.toFixed(5) + '\u00b0';
+      document.getElementById('p-lon').textContent  = lon.toFixed(5) + '\u00b0';
+      document.getElementById('p-elev').textContent = isFinite(elev) ? elev.toFixed(0) + ' m' : '\u2014';
       const pt = nearestLEC(lon, lat);
-      document.getElementById('pt-lec').textContent = pt ? (LEC_NAMES[pt[2]] || '\u2014') : '\u2014';
-      document.getElementById('info-panel').style.display = 'block';
+      document.getElementById('p-lec').textContent  = pt ? (LEC_NAMES[pt[2]] || '\u2014') : '\u2014';
+      document.getElementById('info').style.display = 'block';
     }
 
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(e => handlePick(e.position), Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    document.getElementById('lec-toggle').addEventListener('change', e => {
-      lecLayer.show = e.target.checked;
-    });
-    document.getElementById('lec-opacity').addEventListener('input', e => {
-      lecLayer.alpha = e.target.value / 100;
-    });
-    document.getElementById('hillshade-toggle').addEventListener('change', e => {
-      hillshadeLayer.show = e.target.checked;
-    });
-    document.getElementById('terrain-toggle').addEventListener('change', e => {
+    // ── Layer toggles ────────────────────────────────────────────────────────
+    document.getElementById('lec-on').addEventListener('change', e => { lecLayer.show = e.target.checked; });
+    document.getElementById('lec-alpha').addEventListener('input', e => { lecLayer.alpha = e.target.value / 100; });
+    document.getElementById('boundary-on').addEventListener('change', e => { boundaryEntity.show = e.target.checked; });
+    document.getElementById('terrain-on').addEventListener('change', e => {
       if (e.target.checked) {
         if (Cesium.Terrain) {
           viewer.scene.setTerrain(Cesium.Terrain.fromWorldTerrain({ requestVertexNormals: true }));
@@ -227,11 +285,6 @@
       } else {
         viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
       }
-    });
-    document.getElementById('view-toggle').addEventListener('change', e => {
-      viewer.scene.mode = e.target.checked
-        ? Cesium.SceneMode.SCENE2D
-        : Cesium.SceneMode.SCENE3D;
     });
   </script>
 </body>
