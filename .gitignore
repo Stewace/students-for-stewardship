@@ -17,6 +17,7 @@ data/processed/soils/*.tif
 data/processed/soil/
 data/processed/models/
 data/processed/lec_classification/
+data/processed/piedmont/
 
 # QGIS project files (local paths won't work for others)
 *.qgz
