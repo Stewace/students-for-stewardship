@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LEC Map — Piedmont SC · Hunnicutt Creek</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: #1a1a1a;
+    }
+
+    header {
+      background: #2d5016;
+      color: white;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    header h1 { font-size: 1rem; font-weight: 600; }
+    header p  { font-size: 0.75rem; opacity: 0.7; margin-top: 2px; }
+
+    .header-badges {
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      background: rgba(255,255,255,0.15);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 0.7rem;
+    }
+
+    #map { flex: 1; }
+
+    /* ── Side panel ── */
+    #side-panel {
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      z-index: 1000;
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .panel-card {
+      background: white;
+      border-radius: 6px;
+      padding: 12px 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      font-size: 0.78rem;
+    }
+
+    .panel-card h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 3px;
+      line-height: 1.3;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .stream-swatch {
+      width: 24px;
+      height: 4px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* ── Mobile: panel toggle button ── */
+    #panel-toggle {
+      display: none;
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      z-index: 1001;
+      background: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+    }
+
+    @media (max-width: 560px) {
+      #panel-toggle { display: block; }
+      #side-panel {
+        top: 102px;
+        right: 10px;
+        width: calc(100vw - 20px);
+        max-height: 60vh;
+        overflow-y: auto;
+        display: none;
+      }
+      #side-panel.open { display: flex; }
+      .panel-card { font-size: 0.85rem; }
+      #click-info { width: calc(100vw - 20px); }
+      header h1 { font-size: 0.85rem; }
+    }
+
+    /* ── Click info ── */
+    #click-info {
+      position: absolute;
+      bottom: 40px;
+      left: 10px;
+      z-index: 1000;
+      background: white;
+      border-radius: 6px;
+      padding: 12px 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      width: 260px;
+      font-size: 0.78rem;
+      display: none;
+    }
+
+    #click-info h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #333;
+    }
+
+    #click-info table { width: 100%; border-collapse: collapse; }
+    #click-info td { padding: 2px 0; vertical-align: top; }
+    #click-info td:first-child { color: #888; width: 45%; }
+    #click-info td:last-child { font-weight: 500; }
+
+    .close-btn {
+      float: right;
+      cursor: pointer;
+      color: #aaa;
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+
+    .close-btn:hover { color: #333; }
+
+    /* Rosgen type color chips */
+    .rosgen-chip {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 700;
+      color: white;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>LEC + Rosgen Classification — Piedmont SC</h1>
+    <p>Hunnicutt Creek Watershed · Jones/Hutto + Rosgen Framework</p>
+  </div>
+  <div class="header-badges">
+    <span class="badge">LEC</span>
+    <span class="badge">Rosgen</span>
+    <span class="badge">Terrain</span>
+  </div>
+</header>
+
+<button id="panel-toggle" onclick="togglePanel()">☰ Legend</button>
+
+<div id="map"></div>
+
+<!-- Side panel: legends -->
+<div id="side-panel">
+
+  <!-- LEC Legend -->
+  <div class="panel-card">
+    <h3>LEC Classes</h3>
+    <div class="legend-item"><div class="swatch" style="background:#c62828"></div>Xeric Ridge / Upper Slope</div>
+    <div class="legend-item"><div class="swatch" style="background:#f57f17"></div>Dry-Mesic Slope</div>
+    <div class="legend-item"><div class="swatch" style="background:#558b2f"></div>Mesic Slope</div>
+    <div class="legend-item"><div class="swatch" style="background:#1565c0"></div>Cove / Hollow</div>
+    <div class="legend-item"><div class="swatch" style="background:#00695c"></div>Bottomland / Riparian</div>
+    <div class="legend-item"><div class="swatch" style="background:#9e9e9e"></div>Upland Flat</div>
+  </div>
+
+  <!-- Rosgen Legend -->
+  <div class="panel-card">
+    <h3>Rosgen Stream Types</h3>
+    <div class="legend-item"><div class="stream-swatch" style="background:#1565c0"></div>C — Meandering floodplain</div>
+    <div class="legend-item"><div class="stream-swatch" style="background:#0288d1"></div>E — Low gradient meadow</div>
+    <div class="legend-item"><div class="stream-swatch" style="background:#43a047"></div>B — Moderate gradient</div>
+    <div class="legend-item"><div class="stream-swatch" style="background:#6d4c41"></div>A — Steep cascade</div>
+    <div class="legend-item"><div class="stream-swatch" style="background:#e53935"></div>F — Entrenched (degraded)</div>
+    <div class="legend-item"><div class="stream-swatch" style="background:#e65100"></div>G — Incised step-pool</div>
+    <div class="legend-item"><div class="stream-swatch" style="background:#9c27b0"></div>D — Braided</div>
+  </div>
+
+  <!-- Restoration Priority -->
+  <div class="panel-card">
+    <h3>Restoration Priority</h3>
+    <div class="legend-item"><div class="swatch" style="background:#e53935;border-radius:50%"></div>High (F, G, D types)</div>
+    <div class="legend-item"><div class="swatch" style="background:#fb8c00;border-radius:50%"></div>Moderate</div>
+    <div class="legend-item"><div class="swatch" style="background:#43a047;border-radius:50%"></div>None (C, E types)</div>
+  </div>
+</div>
+
+<!-- Click info panel -->
+<div id="click-info">
+  <span class="close-btn" onclick="document.getElementById('click-info').style.display='none'">✕</span>
+  <h3>Point Information</h3>
+  <table id="click-table"></table>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ---------------------------------------------------------------------------
+// Color maps
+// ---------------------------------------------------------------------------
+
+const ROSGEN_COLORS = {
+  "A":   "#6d4c41",
+  "Aa+": "#4e342e",
+  "B":   "#43a047",
+  "C":   "#1565c0",
+  "D":   "#9c27b0",
+  "DA":  "#7b1fa2",
+  "E":   "#0288d1",
+  "F":   "#e53935",
+  "G":   "#e65100",
+};
+
+const RESTORATION_COLORS = {
+  "high":     "#e53935",
+  "moderate": "#fb8c00",
+  "low":      "#a5d6a7",
+  "none":     "#43a047",
+};
+
+const LEC_COLORS = {
+  1: "#c62828",  // Xeric Ridge
+  2: "#f57f17",  // Dry-Mesic
+  3: "#558b2f",  // Mesic
+  4: "#1565c0",  // Cove
+  5: "#00695c",  // Bottomland
+  6: "#9e9e9e",  // Upland Flat
+};
+
+// ---------------------------------------------------------------------------
+// Map init — centered on generated tile area (Pickens Co., SC)
+// Bounds: 34.6723–34.8135°N, -83.0663–-82.8953°W
+// ---------------------------------------------------------------------------
+const MAP_CENTER = [34.743, -82.981];
+const MAP_ZOOM   = 13;
+
+const map = L.map("map", { zoomControl: true }).setView(MAP_CENTER, MAP_ZOOM);
+
+// ---------------------------------------------------------------------------
+// Base layers
+// ---------------------------------------------------------------------------
+const topo = L.tileLayer(
+  "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",
+  { attribution: "USGS Topo", maxZoom: 16 }
+);
+
+const satellite = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { attribution: "Esri Imagery", maxZoom: 19 }
+);
+
+const osm = L.tileLayer(
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  { attribution: "© OpenStreetMap", maxZoom: 19 }
+);
+
+topo.addTo(map);
+
+// ---------------------------------------------------------------------------
+// Raster overlays — generated from synthetic Piedmont DEM (Pickens Co. SC)
+// ---------------------------------------------------------------------------
+const hillshade = L.tileLayer("tiles/hillshade/{z}/{x}/{y}.png", {
+  opacity: 0.5, maxNativeZoom: 15, maxZoom: 18,
+  attribution: "Hillshade: synthetic 30m DEM"
+});
+
+const lecRaster = L.tileLayer("tiles/lec_classified/{z}/{x}/{y}.png", {
+  opacity: 0.72, maxNativeZoom: 15, maxZoom: 18,
+  attribution: "LEC: Jones/Hutto LDA · Piedmont SC"
+});
+
+// Enable both by default so the map is immediately useful
+hillshade.addTo(map);
+lecRaster.addTo(map);
+
+// ---------------------------------------------------------------------------
+// Rosgen stream network (GeoJSON — from rosgen_classify.py)
+// ---------------------------------------------------------------------------
+let rosgenLayer = null;
+let rosgenRestoreLayer = null;
+
+function styleRosgenStream(feature) {
+  const type = feature.properties.rosgen_type || "B";
+  return {
+    color: ROSGEN_COLORS[type] || "#1565c0",
+    weight: Math.max(2, (feature.properties.strahler_order || 1) + 1),
+    opacity: 0.85,
+  };
+}
+
+function styleRosgenRestore(feature) {
+  const priority = feature.properties.restoration_priority || "none";
+  return {
+    color: RESTORATION_COLORS[priority] || "#9e9e9e",
+    weight: Math.max(3, (feature.properties.strahler_order || 1) + 2),
+    opacity: 0.9,
+    dashArray: priority === "high" ? "6,4" : null,
+  };
+}
+
+function onEachRosgenFeature(feature, layer) {
+  const p = feature.properties;
+  layer.on("click", function (e) {
+    L.DomEvent.stopPropagation(e);
+    const type = p.rosgen_type || "?";
+    const color = ROSGEN_COLORS[type] || "#1565c0";
+    showInfo([
+      ["Rosgen Type",
+        `<span class="rosgen-chip" style="background:${color}">${type}</span>`],
+      ["Valley Type",     p.rosgen_valley || "?"],
+      ["LEC Predicted",   p.lec_class_predicted || "?"],
+      ["Slope",           p.slope_pct != null ? p.slope_pct.toFixed(2) + "%" : "—"],
+      ["Sinuosity",       p.sinuosity != null ? p.sinuosity.toFixed(2) : "—"],
+      ["Entrnch. Ratio",  p.entrenchment_ratio != null ? p.entrenchment_ratio.toFixed(2) : "—"],
+      ["W/D Ratio",       p.width_depth_ratio != null ? p.width_depth_ratio.toFixed(1) : "—"],
+      ["Bankfull Width",  p.bankfull_width_m != null ? p.bankfull_width_m.toFixed(1) + " m" : "—"],
+      ["Confidence",      p.classification_confidence || "—"],
+      ["Restoration",     p.restoration_priority || "—"],
+      ["Order",           p.strahler_order || "—"],
+    ]);
+  });
+  layer.bindTooltip(
+    `<b>Type ${p.rosgen_type || "?"}</b> — Order ${p.strahler_order || "?"}`,
+    { sticky: true, direction: "top" }
+  );
+}
+
+// Load Rosgen GeoJSON (generated by pipeline)
+fetch("data/rosgen_classified.geojson")
+  .then(r => r.json())
+  .then(data => {
+    rosgenLayer = L.geoJSON(data, {
+      style: styleRosgenStream,
+      onEachFeature: onEachRosgenFeature,
+    });
+    rosgenRestoreLayer = L.geoJSON(data, {
+      style: styleRosgenRestore,
+      onEachFeature: onEachRosgenFeature,
+    });
+    // Add to map by default
+    rosgenLayer.addTo(map);
+    updateLayerControl();
+  })
+  .catch(() => {
+    console.info("rosgen_classified.geojson not found — run the classification pipeline first");
+  });
+
+// ---------------------------------------------------------------------------
+// Watershed boundary (optional)
+// ---------------------------------------------------------------------------
+fetch("data/watershed_boundary.geojson")
+  .then(r => r.json())
+  .then(data => {
+    L.geoJSON(data, {
+      style: {
+        color: "#2d5016",
+        weight: 2.5,
+        fillOpacity: 0.04,
+        dashArray: "4,4",
+      },
+    }).addTo(map);
+  })
+  .catch(() => {});
+
+// ---------------------------------------------------------------------------
+// Layer control (built dynamically once Rosgen loads)
+// ---------------------------------------------------------------------------
+let layerControl = null;
+
+function updateLayerControl() {
+  if (layerControl) {
+    map.removeControl(layerControl);
+  }
+
+  const base = {
+    "USGS Topo": topo,
+    "Satellite": satellite,
+    "OpenStreetMap": osm,
+  };
+
+  const overlays = {
+    "Hillshade": hillshade,
+    "LEC Classification": lecRaster,
+  };
+
+  if (rosgenLayer) {
+    overlays["Rosgen Stream Types"] = rosgenLayer;
+  }
+  if (rosgenRestoreLayer) {
+    overlays["Rosgen Restoration Priority"] = rosgenRestoreLayer;
+  }
+
+  const isMobile = window.innerWidth <= 560;
+  layerControl = L.control.layers(base, overlays, {
+    position: "topright",
+    collapsed: isMobile,
+  }).addTo(map);
+}
+
+updateLayerControl();
+L.control.scale({ imperial: true, metric: true }).addTo(map);
+
+// ---------------------------------------------------------------------------
+// Map click handler — terrain info
+// ---------------------------------------------------------------------------
+map.on("click", function (e) {
+  const lat = e.latlng.lat.toFixed(5);
+  const lng = e.latlng.lng.toFixed(5);
+
+  showInfo([
+    ["Latitude",   lat + "°"],
+    ["Longitude",  lng + "°"],
+    ["Elevation",  "—"],
+    ["Slope",      "—"],
+    ["TSI",        "—"],
+    ["LEC Class",  "—"],
+    ["Rosgen",     "—"],
+  ]);
+});
+
+function togglePanel() {
+  const panel = document.getElementById("side-panel");
+  panel.classList.toggle("open");
+  document.getElementById("panel-toggle").textContent =
+    panel.classList.contains("open") ? "✕ Close" : "☰ Legend";
+}
+
+function showInfo(rows) {
+  const table = document.getElementById("click-table");
+  table.innerHTML = rows
+    .map(([label, value]) => `<tr><td>${label}</td><td>${value}</td></tr>`)
+    .join("");
+  document.getElementById("click-info").style.display = "block";
+}
+</script>
+
+</body>
+</html>
